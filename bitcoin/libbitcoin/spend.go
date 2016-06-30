@@ -164,7 +164,6 @@ func (w *LibbitcoinWallet) Spend(amount int64, addr btc.Address, feeLevel bitcoi
 	// Update the db
 	w.ProcessTransaction(btc.NewTx(authoredTx.Tx), 0)
 
-	//TODO: should probably subscribe to the change address just so we get an update when the spend confirms
 	return nil
 }
 

@@ -99,6 +99,49 @@ func (t *TransactionsDB) GetAll() []bitcoin.TransactionInfo {
 	return ret
 }
 
+func (t *TransactionsDB) GetUnconfirmed() []bitcoin.TransactionInfo {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	var ret []bitcoin.TransactionInfo
+	stm := `select * from transactions where height=0`
+	rows, err := t.db.Query(stm)
+	if err != nil {
+		log.Error(err)
+		return ret
+	}
+	for rows.Next() {
+		var txidhex string
+		var tx []byte
+		var height int
+		var state int
+		var timestamp int
+		var value int
+		var exchangeRate float64
+		var exchangeCurrency string
+		if err := rows.Scan(&txidhex, &tx, &height, &state, &timestamp, &value, &exchangeRate, &exchangeCurrency); err != nil {
+			log.Error(err)
+			return ret
+		}
+		txid, err := hex.DecodeString(txidhex)
+		if err != nil {
+			log.Error(err)
+			return ret
+		}
+		ret = append(ret, bitcoin.TransactionInfo{
+			Txid: txid,
+			Tx: tx,
+			Height: height,
+			State: bitcoin.TransactionState(state),
+			Timestamp: time.Unix(int64(timestamp), 0),
+			Value: value,
+			ExchangeRate: exchangeRate,
+			ExchangCurrency: exchangeCurrency,
+
+		})
+	}
+	return ret
+}
+
 func (t *TransactionsDB) GetHeight(txid []byte) (int, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()

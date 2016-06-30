@@ -97,8 +97,8 @@ type Keys interface {
 	// Given a scriptPubKey return the corresponding bip32 key
 	GetKeyForScript(scriptPubKey []byte) (*b32.Key, error)
 
-	// Fetch all external keys
-	GetAllExternal() ([]*b32.Key, error)
+	// Fetch all keys
+	GetAll() ([]*b32.Key, error)
 }
 
 type Transactions interface {
@@ -110,6 +110,9 @@ type Transactions interface {
 
 	// Fetch all transactions
 	GetAll() []bitcoin.TransactionInfo
+
+	// Fetch unconfirmed transactions
+	GetUnconfirmed() []bitcoin.TransactionInfo
 
 	// Fetch the height of a tx
 	GetHeight(txid []byte) (int, error)

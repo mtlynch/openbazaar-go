@@ -46,6 +46,7 @@ func NewLibbitcoinWallet(mnemonic string, params *chaincfg.Params, db repo.Datas
 	l.normalFee = mediumFee
 	l.economicFee = lowFee
 	l.feeAPI = feeApi
+	go l.rebroadcastUnconfirmed()
 	go l.startUpdateLoop()
 	go l.subscribeAll()
 	return l
@@ -67,11 +68,17 @@ func (w *LibbitcoinWallet) startUpdateLoop() {
 	}
 }
 
+func (w *LibbitcoinWallet) rebroadcastUnconfirmed() {
+	for _, tx := range(w.db.Transactions().GetUnconfirmed()) {
+		w.Client.Broadcast(tx.Tx, func(i interface{}, err error){})
+	}
+}
+
 // Loop through each address in the wallet and fetch the history from the libbitcoin server.
 // For each returned txid, fetch the full transaction, checking the mempool first then the blockchain.
 // If a transaction is returned well will parse it and check to see if we need to update our wallet state.
 func (w *LibbitcoinWallet) updateWalletBalances() {
-	keys, _ := w.db.Keys().GetAllExternal()
+	keys, _ := w.db.Keys().GetAll()
 	for _, k := range(keys) {
 		addr, _ := btc.NewAddressPubKey(k.PublicKey().Key, w.params)
 		// FIXME: we don't want to fetch from height zero every time. Ideally it would use the height of the last
@@ -104,7 +111,7 @@ func (w *LibbitcoinWallet) fetchFullTx(txid string, height uint32) {
 }
 
 func (w *LibbitcoinWallet) subscribeAll() {
-	keys, _ := w.db.Keys().GetAllExternal()
+	keys, _ := w.db.Keys().GetAll()
 	for _, k := range(keys) {
 		addr, _ := btc.NewAddressPubKey(k.PublicKey().Key, w.params)
 		w.SubscribeAddress(addr.AddressPubKeyHash())
@@ -112,7 +119,6 @@ func (w *LibbitcoinWallet) subscribeAll() {
 }
 
 func (w *LibbitcoinWallet) SubscribeAddress(addr btc.Address) {
-	log.Debug(addr)
 	w.Client.SubscribeAddress(addr, func(i interface{}){
 		resp := i.(libbitcoin.SubscribeResp)
 		w.ProcessTransaction(&resp.Tx, resp.Height)
